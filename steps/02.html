@@ -1,0 +1,29 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Шаг 2. Первый вход по SSH — ИИ-сервер за вечер</title><meta name="description" content="Подключаемся к серверу и выполняем первые команды Linux.">
+<meta name="theme-color" content="#070b1a"><meta property="og:title" content="Шаг 2. Первый вход по SSH — ИИ-сервер за вечер"><meta property="og:description" content="Подключаемся к серверу и выполняем первые команды Linux."><meta property="og:type" content="website">
+<link rel="icon" href="../img/byte-happy.webp"><link rel="stylesheet" href="../css/style.css"></head><body><header class="top"><div class="wrap"><a class="logo" href="../index.html">ИИ-сервер <b>за вечер</b></a>
+<nav><a href="../index.html#steps">Шаги</a><a href="../example.html">Живой пример</a><a href="../index.html#nq">НЕЙРОКВЕСТ</a><a class="cta" href="../steps/01.html">Начать</a></nav></div></header><main class="wrap page">
+<div class="crumb"><a href="../index.html">Главная</a> → Шаг 2 из 7</div><div class="bar"><i style="width:29%"></i></div>
+<h1>2. Первый вход по SSH</h1>
+<div class="guide"><img src="../img/byte-happy.webp" alt="БАЙТ" width="76" height="75"><div class="bubble">Поздравляю! Теперь ты управляешь компьютером, до которого даже не нужно дотрагиваться! 🤖</div></div>
+<h2>Зачем это нужно</h2><p>SSH — это способ безопасно управлять удалённым компьютером через командную строку. Вместо привычных окон и кнопок ты будешь вводить короткие команды. Я покажу, что они означают и как понять, что всё получилось.</p>
+
+<h2>Откуда подключаться</h2>
+<ul><li><b>Windows 10/11:</b> открой программу «Терминал» или PowerShell (поиск по меню «Пуск»).</li>
+<li><b>macOS и Linux:</b> открой «Терминал».</li>
+<li><b>С телефона:</b> подойдёт приложение Termius или похожее, но для первого раза удобнее компьютер.</li></ul>
+<h2>Подключение</h2>
+<p>Замени <code class="i">203.0.113.10</code> на IP-адрес своего сервера из письма от хостинга:</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>ssh root@203.0.113.10</code></pre></div>
+<p>При первом входе система спросит про отпечаток сервера — напиши <code class="i">yes</code>. Потом введи пароль. <b>Пока ты печатаешь пароль, символы на экране не появляются</b> — это нормально.</p>
+<h2>Первые команды</h2>
+<div class="code"><span class="cap">Какая система</span><button class="copy" type="button">Копировать</button><pre><code>lsb_release -a</code></pre></div>
+<div class="code"><span class="cap">Сколько ядер</span><button class="copy" type="button">Копировать</button><pre><code>nproc</code></pre></div>
+<div class="code"><span class="cap">Сколько памяти</span><button class="copy" type="button">Копировать</button><pre><code>free -h</code></pre></div>
+<div class="code"><span class="cap">Сколько места на диске</span><button class="copy" type="button">Копировать</button><pre><code>df -h /</code></pre></div>
+<p>Должно получиться: в ответе есть <i>Ubuntu 24.04</i>, число ядер и размеры памяти и диска, которые ты выбирал. Чтобы выйти с сервера, набери <code class="i">exit</code>.</p>
+<div class="note">Если команда не сработала — не пугайся: ошибка в консоли обычно говорит, что не так. Скопируй её и спроси у Claude или у нас в сообществе.</div>
+<h2>Что должно получиться</h2><div class="what">Ты самостоятельно войдёшь на сервер, проверишь его работу и выполнишь первые команды. Незнакомый чёрный экран перестанет казаться страшным.</div>
+<h2>Частые ошибки</h2><div class="err"><ul><li>Неправильно вводить IP-адрес</li><li>Путать пароль сервера с паролем личного компьютера</li><li>Считать отсутствие символов при вводе пароля ошибкой</li></ul></div>
+<div class="pn"><a class="btn ghost" href="01.html">← Шаг 1</a><a class="btn" href="03.html">Шаг 3: Защита сервера →</a></div></main><footer><div class="wrap">Сайт сделан в проекте <a href="https://194-87-6-96.sslip.io:8443/" rel="noopener">НЕЙРОКВЕСТ</a> · <a href="https://t.me/neuroquest_game" rel="noopener">Telegram</a> · <a href="https://www.youtube.com/@Neuroquest_game" rel="noopener">YouTube</a> · <a href="https://hengehog1.github.io/neuroquest" rel="noopener">GitHub</a>
+<div class="aff">Некоторые ссылки партнёрские.</div></div></footer><script src="../js/main.js" defer></script></body></html>

@@ -1,0 +1,98 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Шаг 5. Telegram-бот для связи — ИИ-сервер за вечер</title><meta name="description" content="Подключаем Telegram, чтобы писать своему ИИ с телефона.">
+<meta name="theme-color" content="#070b1a"><meta property="og:title" content="Шаг 5. Telegram-бот для связи — ИИ-сервер за вечер"><meta property="og:description" content="Подключаем Telegram, чтобы писать своему ИИ с телефона."><meta property="og:type" content="website">
+<link rel="icon" href="../img/byte-happy.webp"><link rel="stylesheet" href="../css/style.css"></head><body><header class="top"><div class="wrap"><a class="logo" href="../index.html">ИИ-сервер <b>за вечер</b></a>
+<nav><a href="../index.html#steps">Шаги</a><a href="../example.html">Живой пример</a><a href="../index.html#nq">НЕЙРОКВЕСТ</a><a class="cta" href="../steps/01.html">Начать</a></nav></div></header><main class="wrap page">
+<div class="crumb"><a href="../index.html">Главная</a> → Шаг 5 из 7</div><div class="bar"><i style="width:71%"></i></div>
+<h1>5. Telegram-бот для связи</h1>
+<div class="guide"><img src="../img/byte-happy.webp" alt="БАЙТ" width="76" height="75"><div class="bubble">Теперь твой ИИ буквально в кармане! Главное — не отправляй ему случайно список покупок вместо задания! 📱</div></div>
+<h2>Зачем это нужно</h2><p>Необязательно каждый раз открывать терминал, чтобы обратиться к помощнику. Мы создадим Telegram-бота через официальный BotFather и подключим его к серверному приложению, которое передаёт сообщения Claude Code. Доступ ограничим твоим Telegram ID, а секретный токен сохраним отдельно от кода.</p>
+
+<h2>Как это устроено</h2>
+<p>Ты пишешь боту в Telegram → бот на сервере передаёт текст Claude Code → ответ возвращается в чат. Бот отвечает <b>только тебе</b>: чужие сообщения он молча игнорирует.</p>
+<h2>1. Создаём бота</h2>
+<ol><li>В Telegram найди официального бота <b>@BotFather</b> и отправь ему <code class="i">/newbot</code>.</li>
+<li>Придумай название и имя бота (оканчивается на <i>bot</i>).</li>
+<li>BotFather пришлёт <b>токен</b> — длинную строку. Это пароль от бота: никому не показывай и не публикуй.</li></ol>
+<h2>2. Готовим папку и окружение</h2>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>mkdir -p ~/bot &amp;&amp; cd ~/bot
+sudo apt install -y python3-venv
+python3 -m venv venv
+./venv/bin/pip install python-telegram-bot</code></pre></div>
+<h2>3. Файл с секретами</h2>
+<p>Токен хранится отдельно от кода, в файле <code class="i">.env</code>. Сначала оставь <code class="i">OWNER_ID=0</code> — узнаем свой ID на следующем шаге.</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>nano ~/bot/.env</code></pre></div>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>TELEGRAM_BOT_TOKEN=сюда_токен_от_BotFather
+OWNER_ID=0</code></pre></div>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>chmod 600 ~/bot/.env</code></pre></div>
+<h2>4. Код бота</h2>
+<p>Создай файл <code class="i">~/bot/bot.py</code> и вставь в него код целиком:</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>nano ~/bot/bot.py</code></pre></div>
+<div class="code"><span class="cap">bot.py</span><button class="copy" type="button">Копировать</button><pre><code>import asyncio
+import os
+import shutil
+from pathlib import Path
+
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+
+TOKEN = os.environ[&quot;TELEGRAM_BOT_TOKEN&quot;]
+OWNER_ID = int(os.environ[&quot;OWNER_ID&quot;])
+WORKDIR = Path.home() / &quot;workspace&quot;
+CLAUDE = os.environ.get(&quot;CLAUDE_BIN&quot;) or shutil.which(&quot;claude&quot;) or str(Path.home() / &quot;.local/bin/claude&quot;)
+WORKDIR.mkdir(exist_ok=True)
+
+
+async def ask_claude(text: str, fresh: bool) -&gt; str:
+    cmd = [CLAUDE, &quot;-p&quot;, &quot;--allowedTools&quot;, &quot;Read,Glob,Grep&quot;]
+    if not fresh:
+        cmd.append(&quot;--continue&quot;)
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, cwd=WORKDIR,
+        stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        out, err = await asyncio.wait_for(proc.communicate(text.encode()), timeout=600)
+    except asyncio.TimeoutError:
+        proc.kill()
+        return &quot;Слишком долго думаю, попробуй задачу попроще.&quot;
+    if proc.returncode:
+        return &quot;Ошибка Claude Code:\n&quot; + err.decode()[-500:]
+    return out.decode().strip() or &quot;(пустой ответ)&quot;
+
+
+async def cmd_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f&quot;Твой Telegram ID: {update.effective_user.id}&quot;)
+
+
+async def cmd_new(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != OWNER_ID:
+        return
+    ctx.bot_data[&quot;fresh&quot;] = True
+    await update.message.reply_text(&quot;Начинаем новый разговор.&quot;)
+
+
+async def on_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != OWNER_ID:
+        return  # чужим не отвечаем вообще
+    await update.message.chat.send_action(&quot;typing&quot;)
+    answer = await ask_claude(update.message.text, ctx.bot_data.pop(&quot;fresh&quot;, False))
+    for i in range(0, len(answer), 4000):
+        await update.message.reply_text(answer[i:i + 4000])
+
+
+if __name__ == &quot;__main__&quot;:
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler(&quot;id&quot;, cmd_id))
+    app.add_handler(CommandHandler(&quot;new&quot;, cmd_new))
+    app.add_handler(MessageHandler(filters.TEXT &amp; ~filters.COMMAND, on_text))
+    app.run_polling()</code></pre></div>
+<p>Что делает код: команда <code class="i">/id</code> показывает твой Telegram ID; любое обычное сообщение от владельца уходит в <code class="i">claude -p</code> (режим «ответь и выйди»); по умолчанию Claude Code может только <b>читать</b> файлы (<code class="i">Read, Glob, Grep</code>) — так безопасно начинать. Команда <code class="i">/new</code> начинает новый разговор.</p>
+<h2>5. Узнаём свой ID и запускаем</h2>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>cd ~/bot &amp;&amp; set -a &amp;&amp; . ./.env &amp;&amp; set +a &amp;&amp; ./venv/bin/python bot.py</code></pre></div>
+<p>Напиши боту в Telegram <code class="i">/id</code> — он ответит числом. Останови бота (<code class="i">Ctrl+C</code>), впиши число в <code class="i">.env</code> вместо <code class="i">0</code> и запусти снова. Теперь напиши боту любой вопрос — например, «что лежит в папке?».</p>
+<div class="note">Хочешь, чтобы бот мог ещё и создавать файлы и запускать команды? Добавляй нужные инструменты в <code class="i">--allowedTools</code> по одному и только когда понимаешь, что они делают. Не выдавай боту разрешение на всё сразу.</div>
+<h2>Что должно получиться</h2><div class="what">Ты сможешь отправлять своему ИИ задания из Telegram и получать ответы прямо на телефон. Бот станет удобным интерфейсом для работы с сервером, а не открытым помощником для посторонних.</div>
+<h2>Частые ошибки</h2><div class="err"><ul><li>Публиковать токен Telegram-бота</li><li>Не ограничивать список разрешённых пользователей</li><li>Разрешать выполнение любых команд без проверки</li></ul></div>
+<div class="pn"><a class="btn ghost" href="04.html">← Шаг 4</a><a class="btn" href="06.html">Шаг 6: Автозапуск и логи →</a></div></main><footer><div class="wrap">Сайт сделан в проекте <a href="https://194-87-6-96.sslip.io:8443/" rel="noopener">НЕЙРОКВЕСТ</a> · <a href="https://t.me/neuroquest_game" rel="noopener">Telegram</a> · <a href="https://www.youtube.com/@Neuroquest_game" rel="noopener">YouTube</a> · <a href="https://hengehog1.github.io/neuroquest" rel="noopener">GitHub</a>
+<div class="aff">Некоторые ссылки партнёрские.</div></div></footer><script src="../js/main.js" defer></script></body></html>

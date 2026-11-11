@@ -1,0 +1,15 @@
+[Unit]
+Description=Telegram-бот для Claude Code
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ai
+WorkingDirectory=/home/ai/bot
+EnvironmentFile=/home/ai/bot/.env
+ExecStart=/home/ai/bot/venv/bin/python /home/ai/bot/bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

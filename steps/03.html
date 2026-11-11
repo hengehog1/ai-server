@@ -1,0 +1,48 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Шаг 3. Защита сервера — ИИ-сервер за вечер</title><meta name="description" content="Закрываем лишние двери и защищаем сервер от посторонних.">
+<meta name="theme-color" content="#070b1a"><meta property="og:title" content="Шаг 3. Защита сервера — ИИ-сервер за вечер"><meta property="og:description" content="Закрываем лишние двери и защищаем сервер от посторонних."><meta property="og:type" content="website">
+<link rel="icon" href="../img/byte-happy.webp"><link rel="stylesheet" href="../css/style.css"></head><body><header class="top"><div class="wrap"><a class="logo" href="../index.html">ИИ-сервер <b>за вечер</b></a>
+<nav><a href="../index.html#steps">Шаги</a><a href="../example.html">Живой пример</a><a href="../index.html#nq">НЕЙРОКВЕСТ</a><a class="cta" href="../steps/01.html">Начать</a></nav></div></header><main class="wrap page">
+<div class="crumb"><a href="../index.html">Главная</a> → Шаг 3 из 7</div><div class="bar"><i style="width:43%"></i></div>
+<h1>3. Защита сервера</h1>
+<div class="guide"><img src="../img/byte-happy.webp" alt="БАЙТ" width="76" height="75"><div class="bubble">Прежде чем поселить ИИ, поставим крепкую дверь и хороший замок! 🔐</div></div>
+<h2>Зачем это нужно</h2><p>Сервер постоянно доступен через интернет, поэтому его безопасность нельзя откладывать. Мы создадим отдельного пользователя, настроим вход по SSH-ключу, обновления и сетевой экран. Всё сделаем последовательно, чтобы случайно не потерять доступ.</p>
+
+<div class="note"><b>Главное правило этого шага:</b> не закрывай окно, где ты уже вошёл на сервер, пока не проверишь новый вход в <b>отдельном</b> окне. Тогда ты не потеряешь доступ.</div>
+<h2>1. Обновляем систему</h2>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>apt update &amp;&amp; apt -y upgrade</code></pre></div>
+<h2>2. Создаём обычного пользователя</h2>
+<p>Работать от имени <code class="i">root</code> опасно: он может всё и без вопросов. Создадим пользователя <code class="i">ai</code> (имя любое):</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>adduser ai</code></pre></div>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>usermod -aG sudo ai</code></pre></div>
+<h2>3. Вход по SSH-ключу</h2>
+<p>Ключ — это как цифровой замок из двух частей. Одна часть остаётся у тебя, другая — на сервере. <b>На своём компьютере</b> (не на сервере) выполни:</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>ssh-keygen -t ed25519</code></pre></div>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>ssh-copy-id ai@203.0.113.10</code></pre></div>
+<p><b>Если у тебя Windows</b>, команды <code class="i">ssh-copy-id</code> там нет. Вместо неё выполни в PowerShell одну длинную команду:</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh ai@203.0.113.10 &quot;mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh &amp;&amp; cat &gt;&gt; ~/.ssh/authorized_keys &amp;&amp; chmod 600 ~/.ssh/authorized_keys&quot;</code></pre></div>
+<p>Теперь открой <b>новое окно терминала</b> и проверь вход:</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>ssh ai@203.0.113.10</code></pre></div>
+<p>Если вошёл без пароля от сервера (мог попросить только пароль от ключа) — всё хорошо.</p>
+<h2>4. Отключаем вход по паролю и под root</h2>
+<p>Сначала убедись, что вход по ключу работает. Затем на сервере, уже под пользователем <code class="i">ai</code>:</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>sudo nano /etc/ssh/sshd_config.d/00-hardening.conf</code></pre></div>
+<p>Имя файла начинается с <code class="i">00-</code> не случайно: настройки читаются по порядку, и первое значение побеждает. Так наша защита не перебьётся настройками хостинга. Впиши в файл две строки, сохрани (<code class="i">Ctrl+O</code>, Enter) и выйди (<code class="i">Ctrl+X</code>):</p>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>PasswordAuthentication no
+PermitRootLogin no</code></pre></div>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>sudo sshd -t &amp;&amp; sudo systemctl reload ssh</code></pre></div>
+<p>Первая команда проверяет настройки, вторая применяет их. Снова проверь вход в новом окне.</p>
+<h2>5. Сетевой экран (ufw)</h2>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>sudo ufw allow OpenSSH
+sudo ufw enable</code></pre></div>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>sudo ufw status</code></pre></div>
+<p>Должно быть: статус <i>active</i>, и правило для OpenSSH разрешено.</p>
+<h2>6. Защита от подбора пароля (fail2ban)</h2>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>sudo apt install -y fail2ban
+sudo systemctl enable --now fail2ban</code></pre></div>
+<div class="code"><button class="copy" type="button">Копировать</button><pre><code>sudo fail2ban-client status</code></pre></div>
+<p>Fail2ban сам временно блокирует тех, кто часто ошибается при входе. Это отсекает большинство автоматических атак.</p>
+<h2>Что должно получиться</h2><div class="what">Сервер получит базовую защиту от распространённых угроз. Ты научишься безопаснее управлять им и поймёшь, почему нельзя публиковать пароли и секретные ключи.</div>
+<h2>Частые ошибки</h2><div class="err"><ul><li>Оставлять простой пароль</li><li>Отключать старый способ входа до проверки нового</li><li>Закрывать SSH-порт в сетевом экране без проверки доступа</li></ul></div>
+<div class="pn"><a class="btn ghost" href="02.html">← Шаг 2</a><a class="btn" href="04.html">Шаг 4: Установка Claude Code →</a></div></main><footer><div class="wrap">Сайт сделан в проекте <a href="https://194-87-6-96.sslip.io:8443/" rel="noopener">НЕЙРОКВЕСТ</a> · <a href="https://t.me/neuroquest_game" rel="noopener">Telegram</a> · <a href="https://www.youtube.com/@Neuroquest_game" rel="noopener">YouTube</a> · <a href="https://hengehog1.github.io/neuroquest" rel="noopener">GitHub</a>
+<div class="aff">Некоторые ссылки партнёрские.</div></div></footer><script src="../js/main.js" defer></script></body></html>
